@@ -29,7 +29,7 @@ trends) and **you** synthesize the answer.
 2. **Output is JSON when piped/non-TTY** (i.e., whenever you run it). Every command
    returns one object: `{ "ok": bool, "data": ..., "error": {code,message,suggestion}|null, "meta": {...} }`.
 3. **Always check `error` and the exit code** before trusting `data`.
-4. Run as `uv run ghr …` from the project, or `ghr …` once installed (`uv tool install gh-research`).
+4. Run as `uv run ghr …` from the project, or `ghr …` once installed (clone the repo, then `uv tool install .`).
 
 ## Exit codes
 

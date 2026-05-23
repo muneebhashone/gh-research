@@ -21,12 +21,19 @@ teaches an agent how to drive it.
 
 ## Install
 
+Clone the repo, then install it as a `uv` tool (this puts `ghr` on your PATH in an
+isolated environment):
+
 ```bash
-uv tool install gh-research      # or: pipx install gh-research
+git clone https://github.com/muneebhashone/gh-research.git
+cd gh-research
+uv tool install .
 ghr --help
 ```
 
-From a clone (development):
+To upgrade later, `git pull` and re-run `uv tool install . --reinstall`.
+
+For development (run from the source tree without installing):
 
 ```bash
 uv sync
