@@ -40,6 +40,19 @@ uv sync
 uv run ghr --help
 ```
 
+## Use it as an agent skill
+
+This repo ships a [`SKILL.md`](./SKILL.md) that teaches an AI agent (Claude Code,
+Cursor, etc.) how to drive `ghr`. Install it with [skills.sh](https://www.skills.sh):
+
+```bash
+npx skills add muneebhashone/gh-research
+```
+
+Useful flags: `--global` (install for all projects), `--agent '*'` (all detected
+agents), `--list` (preview the skill without installing). The skill *uses* the
+`ghr` CLI, so install the CLI too (see [Install](#install) above).
+
 ## Authentication
 
 - REST features (issues, repos, search) work **unauthenticated** at low rate limits.
