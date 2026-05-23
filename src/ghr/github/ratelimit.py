@@ -22,11 +22,16 @@ class RateLimitState:
 
     def __init__(self) -> None:
         self.resources: dict[str, ResourceBudget] = {}
+        #: Resource named by the most recent REST response that carried rate-limit
+        #: headers. Lets meta surface the right bucket even when the caller can't
+        #: name it ahead of time (e.g. semantic search has its own 10/min bucket).
+        self.last_rest_resource: str | None = None
 
     def update_from_rest_headers(self, headers: Mapping[str, str]) -> None:
         if "x-ratelimit-remaining" not in headers:
             return
         resource = headers.get("x-ratelimit-resource", "core")
+        self.last_rest_resource = resource
         self.resources[resource] = ResourceBudget(
             limit=_to_int(headers.get("x-ratelimit-limit")),
             remaining=_to_int(headers.get("x-ratelimit-remaining")),

@@ -70,6 +70,10 @@ def build_meta(
     }
     if resource and state is not None:
         snapshot = state.snapshot(resource)
+        if snapshot is None and state.last_rest_resource:
+            # The named bucket wasn't reported (e.g. semantic search lands in its
+            # own bucket); surface whatever resource GitHub actually returned.
+            snapshot = state.snapshot(state.last_rest_resource)
         if snapshot is not None:
             meta["rate_limit"] = snapshot
     if budget is not None:

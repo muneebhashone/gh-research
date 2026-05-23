@@ -34,6 +34,7 @@ TTL_BY_RESOURCE: dict[str, int] = {
     "issue": 900,
     "issue_list": 300,
     "search": 300,
+    "search_semantic": 300,
     "discussion": 900,
     "repo": 3600,
 }

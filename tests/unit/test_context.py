@@ -40,6 +40,28 @@ def test_build_meta_assembles_expected_fields() -> None:
     assert "tool_version" in meta
 
 
+def test_build_meta_falls_back_to_observed_resource_when_named_missing() -> None:
+    # GitHub reports a distinct rate-limit resource for semantic search (10/min);
+    # when the named resource ("search") isn't present, meta should surface the
+    # resource actually observed on the wire rather than dropping rate_limit.
+    state = RateLimitState()
+    state.update_from_rest_headers(
+        {
+            "x-ratelimit-remaining": "9",
+            "x-ratelimit-limit": "10",
+            "x-ratelimit-reset": "100",
+            "x-ratelimit-resource": "search_semantic",
+        }
+    )
+    meta = build_meta(command="issues search", params={}, state=state, resource="search")
+    assert meta["rate_limit"] == {
+        "resource": "search_semantic",
+        "remaining": 9,
+        "limit": 10,
+        "reset": 100,
+    }
+
+
 def test_build_meta_omits_optional_blocks_when_absent() -> None:
     meta = build_meta(command="rate", params={})
     assert "truncated" not in meta

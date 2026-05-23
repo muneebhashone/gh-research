@@ -12,9 +12,28 @@ from ghr.commands._common import app_context, finish, split_repo, with_trimmed_b
 from ghr.constants import ttl_for
 from ghr.context import AppContext
 from ghr.github.client import PageResult
+from ghr.github.errors import UsageError
 from ghr.models import is_pull_request, normalize_issue
 
 app = typer.Typer(no_args_is_help=True, help="Search, list, view, and analyze issues.")
+
+#: Issue-search relevance modes. ``None`` (the default) is GitHub's classic
+#: lexical search; ``semantic``/``hybrid`` use the semantic index and carry a
+#: stricter 10 req/min, auth-only rate limit (GA April 2026).
+SEARCH_TYPES: tuple[str, ...] = ("semantic", "hybrid")
+
+
+def validate_search_type(value: str | None) -> str | None:
+    """Return a normalized search type or raise a usage error for unknown values."""
+    if value is None:
+        return None
+    normalized = value.strip().lower()
+    if normalized not in SEARCH_TYPES:
+        raise UsageError(
+            f"Invalid --search-type {value!r}.",
+            suggestion=f"Use one of: {', '.join(SEARCH_TYPES)} (omit for lexical search).",
+        )
+    return normalized
 
 
 def build_issue_query(
@@ -61,14 +80,28 @@ def build_issue_query(
 
 
 def search_issues(
-    actx: AppContext, *, q: str, sort: str | None, order: str, limit: int
+    actx: AppContext,
+    *,
+    q: str,
+    sort: str | None,
+    order: str,
+    limit: int,
+    search_type: str | None = None,
 ) -> tuple[list[dict[str, Any]], PageResult]:
-    """Run an issue search and return (normalized non-PR issues, raw page)."""
+    """Run an issue search and return (normalized non-PR issues, raw page).
+
+    ``search_type`` (``semantic``/``hybrid``) opts into GitHub's semantic index;
+    when omitted, the classic lexical search runs. Semantic/hybrid results live in
+    their own cache bucket since the same ``q`` yields a different result set.
+    """
     params: dict[str, Any] = {"q": q, "order": order}
     if sort:
         params["sort"] = sort
+    if search_type:
+        params["search_type"] = search_type
+    resource = "search_semantic" if search_type else "search"
     page = actx.client.paginate_search(
-        "/search/issues", params=params, resource="search", ttl=ttl_for("search"), limit=limit
+        "/search/issues", params=params, resource=resource, ttl=ttl_for(resource), limit=limit
     )
     items = [normalize_issue(it) for it in page.items if not is_pull_request(it)]
     return items, page
@@ -122,6 +155,11 @@ def search(
         None, "--sort", help="comments|reactions|interactions|created|updated"
     ),
     order: str = typer.Option("desc", "--order"),
+    search_type: str = typer.Option(
+        None,
+        "--search-type",
+        help="semantic|hybrid (semantic index, auth-only, 10 req/min); omit for lexical.",
+    ),
     with_body: bool = typer.Option(False, "--with-body"),
     limit: int = typer.Option(None, "--limit"),
 ) -> None:
@@ -144,15 +182,20 @@ def search(
     )
 
     def work() -> tuple[Any, dict[str, Any]]:
-        items, page = search_issues(actx, q=q, sort=sort, order=order, limit=count)
+        mode = validate_search_type(search_type)  # raises UsageError → exit 2 envelope
+        items, page = search_issues(
+            actx, q=q, sort=sort, order=order, limit=count, search_type=mode
+        )
         out = [with_trimmed_body(i, actx, include_body=with_body) for i in items]
-        data = {"query": q, "total_count": page.total_count, "issues": out}
+        data: dict[str, Any] = {"query": q, "total_count": page.total_count, "issues": out}
+        if mode:
+            data["search_type"] = mode
         return data, ({"truncated": page.truncated} if page.truncated else {})
 
     finish(
         actx,
         command="issues search",
-        params={"q": q, "sort": sort, "limit": count},
+        params={"q": q, "sort": sort, "limit": count, "search_type": search_type},
         resource="search",
         work=work,
     )

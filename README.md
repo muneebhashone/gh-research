@@ -57,6 +57,9 @@ agents), `--list` (preview the skill without installing). The skill *uses* the
 
 - REST features (issues, repos, search) work **unauthenticated** at low rate limits.
 - **Discussions require a token** (GitHub's GraphQL API is auth-only).
+- **Semantic issue search** (`issues search --search-type semantic|hybrid`) also requires
+  a token and has its own stricter 10 req/min limit. `semantic` ranks by meaning for
+  natural-language queries; `hybrid` blends semantic + keyword; omit it for classic lexical.
 - Token resolution order: `--token` > `GH_TOKEN` > `GITHUB_TOKEN` > `gh auth token`
   (if the GitHub CLI is installed and logged in) > stored config/keyring.
 
@@ -76,6 +79,7 @@ ghr research activity cli/cli                       # booming vs dying
 ghr research common-issues --topic cli --language go
 
 ghr issues search --repo microsoft/vscode --label bug --sort reactions --limit 5
+ghr issues search "auth fails on mobile" --repo cli/cli --search-type semantic  # semantic index
 ghr discussions list vercel/next.js --limit 10
 ghr rate                                            # rate-limit budgets
 ```

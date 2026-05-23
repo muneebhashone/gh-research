@@ -48,6 +48,12 @@ trends) and **you** synthesize the answer.
 - REST (issues, repos, search) works **unauthenticated** but at 60 req/hr and 10
   searches/min. **Discussions require a token** (GitHub GraphQL is auth-only) — without
   one, `discussions *` and `research hot-discussions` exit **4**.
+- **Semantic issue search** (`issues search --search-type semantic|hybrid`) needs a
+  **token** and has its own stricter **10 req/min** bucket (GitHub reports it as
+  `semantic_search` in `meta.rate_limit`). `semantic` = pure meaning-based ranking for
+  natural-language queries; `hybrid` = semantic + keyword in one pass. Omit the flag for
+  the classic lexical search. Use it for fuzzy "find issues *about* X" questions where
+  the exact words won't match; stick with lexical (+ qualifiers) for precise filtering.
 - `ghr auth status` shows whether a token is available and its source. `ghr rate` shows
   per-bucket budgets. Read `meta.rate_limit.remaining` and don't fan out blindly.
 - The Search API hard-caps at **1000 results**; when hit, `meta.truncated.reason ==
@@ -94,7 +100,7 @@ repo search [--language --topic --min-stars --created --pushed --sort]
 repo view <owner/repo>            repo topics <owner/repo>
 
 issues search [--repo --org --author --label --language --state --in --created --updated
-               --min-comments --min-reactions --sort --order --with-body --limit]
+               --min-comments --min-reactions --sort --order --search-type --with-body --limit]
 issues list <owner/repo> [--state --labels --sort --since]
 issues view <owner/repo> <number> [--comments N]
 issues analyze <owner/repo> [--what hot,labels --window --top]
@@ -132,3 +138,6 @@ Global flags (before the subcommand): `--json/--no-json --jq <expr> --quiet-meta
 - `common-issues` "themes" are **label** aggregates, not semantic clusters — cluster them yourself.
 - Global flags must precede the subcommand.
 - `research activity` counts **issues only** in v1 (not discussions).
+- `--search-type semantic|hybrid` is relevance-ranked ("best match"); a `--sort` you pass
+  alongside it may be ignored upstream. It's auth-only and capped at 10 req/min, so don't
+  fan it out across many repos — scope with `--repo`/`--org` and keep `--limit` modest.

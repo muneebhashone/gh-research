@@ -24,6 +24,17 @@ def test_rest_headers_parsed_by_resource() -> None:
     }
     assert st.remaining("core") == 4990
     assert st.snapshot("search") is None
+    assert st.last_rest_resource == "core"
+
+
+def test_last_rest_resource_tracks_most_recent_rest_response() -> None:
+    st = RateLimitState()
+    assert st.last_rest_resource is None
+    st.update_from_rest_headers({"x-ratelimit-remaining": "9", "x-ratelimit-resource": "search"})
+    assert st.last_rest_resource == "search"
+    # A response without rate-limit headers must not clobber the last-seen resource.
+    st.update_from_rest_headers({})
+    assert st.last_rest_resource == "search"
 
 
 def test_graphql_body_parsed_with_reset_epoch() -> None:
